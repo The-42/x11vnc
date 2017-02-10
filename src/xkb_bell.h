@@ -1,5 +1,5 @@
 /*
-   Copyright (C) 2002-2010 Karl J. Runge <runge@karlrunge.com> 
+   Copyright (C) 2002-2010 Karl J. Runge <runge@karlrunge.com>
    All rights reserved.
 
 This file is part of x11vnc.
@@ -34,11 +34,16 @@ so, delete this exception statement from your version.
 #define _X11VNC_XKB_BELL_H
 
 /* -- xkb_bell.h -- */
+void xkbb_init(Display *dpy);
+void xkbb_setup_watch(Display *dpy);
+void xkbb_check_event(Display *dpy);
+int xkbb_get_base_event_type(void);
 
-extern int xkb_base_event_type;
+int xkb_present(void);
 
-extern void initialize_xkb(void);
-extern void initialize_watch_bell(void);
-extern void check_bell_event(void);
+int xkbb_watch_get(void);
+void xkbb_watch_set(int active);
+int xkbb_sound_get(void);
+void xkbb_sound_set(int active);
 
 #endif /* _X11VNC_XKB_BELL_H */

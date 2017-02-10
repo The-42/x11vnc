@@ -47,7 +47,6 @@ int xshm_opcode = 0;
 int xtest_present = 0;
 int xtrap_present = 0;
 int xrecord_present = 0;
-int xkb_present = 0;
 int xinerama_present = 0;
 
 int keycode_state[256];

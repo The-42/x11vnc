@@ -36,6 +36,7 @@ so, delete this exception statement from your version.
 #include "xwrappers.h"
 #include "xrecord.h"
 #include "xinerama.h"
+#include "xkb_bell.h"
 #include "pointer.h"
 #include "userinput.h"
 #include "win_utils.h"
@@ -299,7 +300,7 @@ void clear_locks(void) {
 
 	/* n.b. caller decides to X_LOCK or not. */
 #if HAVE_XKEYBOARD
-	if (xkb_present) {
+	if (xkb_present()) {
 		XkbStateRec kbstate;
 		XkbGetState(dpy, XkbUseCoreKbd, &kbstate);
 		rfbLog("locked:  0x%x\n", kbstate.locked_mods);
@@ -757,7 +758,7 @@ static void add_dead_keysyms(char *str) {
 				inmap = 1;
 			}
 #if HAVE_XKEYBOARD
-			if (! inmap && xkb_present && dpy) {
+			if (! inmap && xkb_present() && dpy) {
 				int kc, grp, lvl;
 				for (kc = 0; kc < 0x100; kc++) {
 				    for (grp = 0; grp < 4; grp++) {

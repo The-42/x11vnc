@@ -2606,7 +2606,7 @@ char *process_remote_cmd(char *cmd, int stringonly) {
 			snprintf(buf, bufn, "ans=%s:%d", p, use_xkb_modtweak);
 			goto qry;
 		}
-		if (! xkb_present) {
+		if (!xkb_present()) {
 			rfbLog("remote_cmd: cannot enable -xkb "
 			    "modtweak mode (not supported on X display)\n");
 			goto done;
@@ -2627,7 +2627,7 @@ char *process_remote_cmd(char *cmd, int stringonly) {
 			snprintf(buf, bufn, "ans=%s:%d", p, !use_xkb_modtweak);
 			goto qry;
 		}
-		if (! xkb_present) {
+		if (!xkb_present()) {
 			rfbLog("remote_cmd: cannot disable -xkb "
 			    "modtweak mode (not supported on X display)\n");
 			goto done;
@@ -2684,7 +2684,7 @@ char *process_remote_cmd(char *cmd, int stringonly) {
 		p += strlen("skip_keycodes:");
 		rfbLog("remote_cmd: setting xkb -skip_keycodes"
 		    " to:\n\t'%s'\n", p);
-		if (! xkb_present) {
+		if (!xkb_present()) {
 			rfbLog("remote_cmd: warning xkb not present\n");
 		} else if (! use_xkb_modtweak) {
 			rfbLog("remote_cmd: turning on xkb.\n");
@@ -2933,7 +2933,7 @@ char *process_remote_cmd(char *cmd, int stringonly) {
 			}
 			nofb = 1;
 			sound_bell = 0;
-			initialize_watch_bell();
+			xkbb_setup_watch(dpy);
 			set_nofb_params(0);
 			do_new_fb(1);
 		}
@@ -2945,7 +2945,7 @@ char *process_remote_cmd(char *cmd, int stringonly) {
 			goto qry;
 		}
 		rfbLog("remote_cmd: enabling bell (if supported).\n");
-		initialize_watch_bell();
+		xkbb_setup_watch(dpy);
 		sound_bell = 1;
 		goto done;
 	}
@@ -2955,7 +2955,7 @@ char *process_remote_cmd(char *cmd, int stringonly) {
 			goto qry;
 		}
 		rfbLog("remote_cmd: disabling bell.\n");
-		initialize_watch_bell();
+		xkbb_setup_watch(dpy);
 		sound_bell = 0;
 		goto done;
 	}
@@ -6107,7 +6107,7 @@ char *process_remote_cmd(char *cmd, int stringonly) {
 			goto qry;
 		}
 		if (!strcmp(p, "ext_xkb")) {
-			snprintf(buf, bufn, "aro=%s:%d", p, xkb_present);
+			snprintf(buf, bufn, "aro=%s:%d", p, xkb_present());
 			goto qry;
 		}
 		if (!strcmp(p, "ext_xshm")) {

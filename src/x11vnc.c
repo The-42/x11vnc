@@ -5655,10 +5655,15 @@ int main(int argc, char* argv[]) {
 	}
 
 #if HAVE_XKEYBOARD
+	xkbb_watch_set(watch_bell);
+	xkbb_sound_set(sound_bell);
 	/* check for XKEYBOARD */
-	initialize_xkb();
-	initialize_watch_bell();
-	if (!xkb_present && use_xkb_modtweak) {
+	if (!xkbcompat) {
+		xkbb_init(dpy);
+		xkbb_setup_watch(dpy);
+	}
+
+	if (!xkb_present() && use_xkb_modtweak) {
 		if (! quiet && ! raw_fb_str) {
 			rfbLog("warning: disabling xkb modtweak. XKEYBOARD ext. not present.\n");
 		}
@@ -5666,7 +5671,7 @@ int main(int argc, char* argv[]) {
 	}
 #endif
 
-	if (xkb_present && !use_xkb_modtweak && !got_noxkb) {
+	if (xkb_present() && !use_xkb_modtweak && !got_noxkb) {
 		if (use_modifier_tweak) {
 			switch_to_xkb_if_better();
 		}

@@ -44,7 +44,6 @@ extern int xshm_opcode;
 extern int xtest_present;
 extern int xtrap_present;
 extern int xrecord_present;
-extern int xkb_present;
 extern int xinerama_present;
 
 extern int keycode_state[];

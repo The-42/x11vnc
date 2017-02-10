@@ -435,7 +435,7 @@ static void initialize_xevents(int reset) {
 
 static void print_xevent_bases(void) {
 	fprintf(stderr, "X event bases: xkb=%d, xtest=%d, xrandr=%d, "
-	    "xfixes=%d, xdamage=%d, xtrap=%d\n", xkb_base_event_type,
+	    "xfixes=%d, xdamage=%d, xtrap=%d\n", xkbb_get_base_event_type(),
 	    xtest_base_event_type, xrandr_base_event_type,
 	    xfixes_base_event_type, xdamage_base_event_type,
 	    xtrap_base_event_type);
@@ -1572,9 +1572,9 @@ void check_xevents(int reset) {
 		trapped_xerror = 0;
 	}
 
-	if (watch_bell || now > last_bell+1) {
+	if (xkbb_watch_get() || now > last_bell+1) {
 		last_bell = now;
-		check_bell_event();
+		xkbb_check_event(dpy);
 	}
 	if (tray_request != None) {
 		static time_t last_tray_request = 0;

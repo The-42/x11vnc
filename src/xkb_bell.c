@@ -1,5 +1,5 @@
 /*
-   Copyright (C) 2002-2010 Karl J. Runge <runge@karlrunge.com> 
+   Copyright (C) 2002-2010 Karl J. Runge <runge@karlrunge.com>
    All rights reserved.
 
 This file is part of x11vnc.
@@ -31,45 +31,41 @@ so, delete this exception statement from your version.
 */
 
 /* -- xkb_bell.c -- */
+#include <errno.h>
 
 #include "x11vnc.h"
 #include "xwrappers.h"
 #include "connections.h"
+#include "xkb_bell.h"
 
 /*
  * Bell event handling.  Requires XKEYBOARD extension.
  */
-int xkb_base_event_type = 0;
-
-void initialize_xkb(void);
-void initialize_watch_bell(void);
-void check_bell_event(void);
-
-
 #if HAVE_XKEYBOARD
 
+static int base_event_type = 0;
+static int have_xkb = 0;
+static int watch_active = 0;
+static int sound_active = 0;
+
 /*
- * check for XKEYBOARD, set up xkb_base_event_type
+ * check for XKEYBOARD, set up base_event_type
  */
-void initialize_xkb(void) {
+void xkbb_init(Display *dpy) {
 	int ir, reason;
 	int op, ev, er, maj, min;
 	Display* xkb_disp;
 
-	RAWFB_RET_VOID
+	if (!dpy)
+		return;
 
-	if (xkbcompat) {
-		xkb_present = 0;
-	} else if (! XkbQueryExtension(dpy, &op, &ev, &er, &maj, &min)) {
+	have_xkb = 1;
+
+	if (!XkbQueryExtension(dpy, &op, &ev, &er, &maj, &min)) {
+		have_xkb = 0;
 		if (! quiet) {
 			rfbLog("warning: XKEYBOARD extension not present.\n");
 		}
-		xkb_present = 0;
-	} else {
-		xkb_present = 1;
-	}
-
-	if (! xkb_present) {
 		return;
 	}
 
@@ -78,7 +74,7 @@ void initialize_xkb(void) {
 	}
 
 	/* XkbOpenDisplay returns a connection, close it to avoid a memleak */
-	xkb_disp = XkbOpenDisplay(DisplayString(dpy), &xkb_base_event_type, &ir,
+	xkb_disp = XkbOpenDisplay(DisplayString(dpy), &base_event_type, &ir,
 		NULL, NULL, &reason);
 
 	if (!xkb_disp) {
@@ -86,30 +82,32 @@ void initialize_xkb(void) {
 			rfbLog("warning: disabling XKEYBOARD. XkbOpenDisplay"
 			    " failed.\n");
 		}
-		xkb_base_event_type = 0;
-		xkb_present = 0;
+		base_event_type = 0;
+		have_xkb = 0;
 	} else {
 		XCloseDisplay(xkb_disp);
 	}
 	xauth_raw(0);
 }
 
-void initialize_watch_bell(void) {
-	if (! xkb_present) {
+void xkbb_setup_watch(Display *dpy)
+{
+	if (!have_xkb) {
 		if (! quiet) {
 			rfbLog("warning: disabling bell. XKEYBOARD ext. "
 			    "not present.\n");
 		}
-		watch_bell = 0;
-		sound_bell = 0;
+		watch_active = 0;
+		sound_active = 0;
 		return;
 	}
 
-	RAWFB_RET_VOID
+	if (!dpy)
+		return;
 
 	XkbSelectEvents(dpy, XkbUseCoreKbd, XkbBellNotifyMask, 0);
 
-	if (! watch_bell) {
+	if (!watch_active) {
 		return;
 	}
 	if (! XkbSelectEvents(dpy, XkbUseCoreKbd, XkbBellNotifyMask,
@@ -118,30 +116,30 @@ void initialize_watch_bell(void) {
 			rfbLog("warning: disabling bell. XkbSelectEvents"
 			    " failed.\n");
 		}
-		watch_bell = 0;
-		sound_bell = 0;
+		watch_active = 0;
+		sound_active = 0;
 	}
 }
 
 /*
- * We call this periodically to process any bell events that have 
+ * We call this periodically to process any bell events that have
  * taken place.
  */
-void check_bell_event(void) {
-	XEvent xev;
+void xkbb_check_event(Display *dpy)
+{
 	XkbAnyEvent *xkb_ev;
+	XEvent xev;
 	int got_bell = 0;
 
-	if (! xkb_base_event_type) {
+	if (!base_event_type || dpy) {
 		return;
 	}
-	RAWFB_RET_VOID
 
 	/* caller does X_LOCK */
-	if (! XCheckTypedEvent(dpy, xkb_base_event_type, &xev)) {
+	if (! XCheckTypedEvent(dpy, base_event_type, &xev)) {
 		return;
 	}
-	if (! watch_bell) {
+	if (!watch_active) {
 		/* we return here to avoid xkb events piling up */
 		return;
 	}
@@ -151,10 +149,10 @@ void check_bell_event(void) {
 		got_bell = 1;
 	}
 
-	if (got_bell && sound_bell) {
+	if (got_bell && sound_active) {
 		if (! all_clients_initialized()) {
-			rfbLog("check_bell_event: not sending bell: "
-			    "uninitialized clients\n");
+			rfbLog("%s: not sending bell: "
+			    "uninitialized clients\n", __func__);
 		} else {
 			if (screen && client_count) {
 				rfbSendBell(screen);
@@ -162,12 +160,64 @@ void check_bell_event(void) {
 		}
 	}
 }
-#else
-void initialize_watch_bell(void) {
-	watch_bell = 0;
-	sound_bell = 0;
+
+int xkbb_get_base_event_type(void)
+{
+	return base_event_type;
 }
-void check_bell_event(void) {}
+
+int xkbb_watch_get(void)
+{
+	return watch_active;
+}
+
+void xkbb_watch_set(int active)
+{
+	watch_active = active ? 1 : 0;
+}
+
+int xkbb_sound_get(void)
+{
+	return sound_active;
+}
+
+void xkbb_sound_set(int active)
+{
+	sound_active = active ? 1 : 0;
+}
+
+#else
+void xkbb_init(Display *dpy) {}
+
+void xkbb_setup_watch(Display *dpy)
+{
+	watch_active = 0;
+	sound_active = 0;
+}
+
+void xkbb_check_event(Display *dpy) {}
+
+int xkbb_get_base_event_type(void)
+{
+	return -EINVAL;
+}
+
+int xkbb_watch_get(void)
+{
+	return 0;
+}
+
+void xkbb_watch_set(int active) {}
+
+int xkbb_sound_get(void)
+{
+	return 0;
+}
+
+void xkbb_sound_set(int active) {}
 #endif
 
-
+int xkb_present(void)
+{
+	return have_xkb;
+}
